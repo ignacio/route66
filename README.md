@@ -33,7 +33,7 @@ captured.
 ## Installation #
 **Route66** is installable with [LuaRocks][4].
 
-    luarocks install route66 --from=https://github.com/ignacio/route66/raw/master/rockspecs/route66-scm-1.rockspec
+    luarocks install http://github.com/ignacio/route66/raw/master/rockspecs/route66-scm-1.rockspec
 
 ## Documentation #
 The available methods are:
