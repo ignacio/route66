@@ -50,7 +50,7 @@ Once you have defined your routes, you need to bind the router with a HTTP serve
 
 ### Full example #
 
-A full example is available [here](https://gist.github.com/751528.js).
+A full example is available [here](https://gist.github.com/751528).
 <script src="https://gist.github.com/751528.js"> </script>
 
 ## Acknowledgments #
