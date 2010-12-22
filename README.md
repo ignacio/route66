@@ -33,7 +33,7 @@ captured.
 ## Installation #
 **Route66** is installable with [LuaRocks][4].
 
-luarocks install --from=
+    luarocks install route66 --from=https://github.com/ignacio/route66/raw/master/rockspecs/route66-scm-1.rockspec
 
 ## Documentation #
 The available methods are:
@@ -50,6 +50,7 @@ Once you have defined your routes, you need to bind the router with a HTTP serve
 
 ### Full example #
 
+<script src="https://gist.github.com/751528.js"> </script>
 
 ## Acknowledgments #
 I'd like to acknowledge the work of the following people:
