@@ -22,7 +22,8 @@ function new()
 			post = {},
 			put = {},
 			delete = {},
-			head = {}
+			head = {},
+			options = {}
 		}
 	}
 	return setmetatable(r, router_methods)
