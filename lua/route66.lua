@@ -78,6 +78,9 @@ function router_methods:head(...)
 	add_handler(self, "head", ...)
 end
 
+function router_method:options(...)
+	add_handler(self, "options", ...)
+end
 
 --
 --
