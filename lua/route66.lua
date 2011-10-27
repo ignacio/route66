@@ -112,6 +112,13 @@ function router_methods:dispatch(server, req, res)
 	local uri = Url.parse(req.url)
 	local pathname = uri.pathname
 	
+	if not pathname then
+		console.error("route66.dispatch: Malformed url %q", req.url)
+		res:writeHead(400, { ["Content-Type"] = "text/plain" })
+		res:finish("Bad request")
+		return false
+	end
+	
 	local handler, captures, index = dispatcher(self, req.method:lower(), pathname)
 	captures = captures or {}
 	
