@@ -12,6 +12,9 @@ local ipairs = ipairs
 
 module((...))
 
+-- can set this to true to enable for all connections
+debug_mode = false
+
 local router_methods = {}
 router_methods.__index = router_methods
 
@@ -116,7 +119,9 @@ function router_methods:dispatch(server, req, res)
 	local pathname = uri.pathname
 	
 	if not pathname then
-		console.error("route66.dispatch: Malformed url %q", req.url)
+		if debug_mode then
+			console.error("route66.dispatch: Malformed url %q", req.url)
+		end
 		res:writeHead(400, { ["Content-Type"] = "text/plain" })
 		res:finish("Bad request")
 		return false
@@ -125,7 +130,9 @@ function router_methods:dispatch(server, req, res)
 	local handler, captures, index = dispatcher(self, req.method:lower(), pathname)
 	captures = captures or {}
 	
-	console.debug("method: '%s', path: '%s', handler: '%s'", req.method, pathname, handler)
+	if debug_mode then
+		console.debug("method: '%s', path: '%s', handler: '%s'", req.method, pathname, handler)
+	end
 	if not handler then
 		return false
 	end
