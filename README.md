@@ -47,6 +47,7 @@ The available methods are:
  - put
  - delete
  - head
+ - options
 
 Once you have defined your routes, you need to bind the router with a HTTP server:
 
