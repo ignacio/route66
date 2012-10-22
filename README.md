@@ -48,15 +48,47 @@ The available methods are:
  - delete
  - head
  - options
+ - propfind
+ - proppatch
+ - mkcol
+ - copy
+ - move
+ - lock
+ - unlock
+ - patch
+ - version-control
+ - report
+ - checkout
+ - checkin
+ - uncheckout
+ - mkworkspace
+ - update
+ - label
+ - merge
+ - baseline-control
+ - mkactivity
 
 Once you have defined your routes, you need to bind the router with a HTTP server:
 
     bindServer(server)
 
+If there is no handler for the method of a given request, the router replies with "405 Method not allowed".
+
+It there is a handler for the given method, but no matching pattern is found, a "request" event is emitted, just like in
+ a vanilla server.
+
 ### Full example #
 
 A full example is available [here](https://gist.github.com/751528).
 <script src="https://gist.github.com/751528.js"> </script>
+
+### Tests #
+
+If you want to run the test suite, you'll need to install [siteswap][5]. After doing that, just do:
+
+```bash
+luanode unittest/run.lua
+````
 
 ## Acknowledgments #
 I'd like to acknowledge the work of the following people:
@@ -72,3 +104,4 @@ I'd like to acknowledge the work of the following people:
 [2]: http://keplerproject.github.com/orbit/
 [3]: http://www.sinatrarb.com/
 [4]: http://www.luarocks.org/
+[5]: https://github.com/ignacio/siteswap/
