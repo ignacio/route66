@@ -6,6 +6,7 @@ local Runner = require "siteswap.runner"
 local Test = require "siteswap.test"
 
 local event_emitter = require "luanode.event_emitter"
+local Class = require "luanode.class"
 
 local route66 = require "route66"
 
@@ -25,8 +26,25 @@ router:get("hola", "que", "tal", function(req, res)
 end)
 
 router:post("/postit", function(req, res)
+	assert(#req:listeners("data") > 0, "A 'data' listener should have been added")
 	res:writeHead(200, { ["Content-Type"] = "text/plain"})
 	res:finish(req.body)
+end)
+
+router:raw_post("/raw_post", function(req, res)
+	-- no data listener was added
+	assert(#req:listeners("data") == 0, "No 'data' listener should have been added")
+	
+	req._incoming_data = {}
+	req:on("data", function (self, data)
+		req._incoming_data[#req._incoming_data + 1] = data
+	end)
+	req:on("end", function()
+		req.body = table.concat(req._incoming_data)
+		req._incoming_data = nil
+		res:writeHead(200, { ["Content-Type"] = "text/plain"})
+		res:finish(req.body)
+	end)
 end)
 
 
@@ -44,31 +62,31 @@ router:bindServer(server)
 --
 -- Fake requests and responses
 --
-local request_mt = {}
-request_mt.__index = request_mt
+local Request = Class.InheritsFrom(event_emitter)
 
-function request_mt:finish (data)
+function Request:finish (data)
 	if data then
 		table.insert(self.body, data)
 	end
 	self.body = table.concat(self.body)
+	
+	self:emit("data", self.body)
+	self:emit("end")
 end
 
 local function make_request ()
-	return setmetatable({
-		body = {}
-	}, request_mt)
+	return Request({ body = {} })
 end
 
-local response_mt = {}
-response_mt.__index = response_mt
 
-function response_mt:writeHead (status, headers)
+local Response = Class.InheritsFrom(event_emitter)
+
+function Response:writeHead (status, headers)
 	self.status = status
 	self.headers = headers
 end
 
-function response_mt:finish (data)
+function Response:finish (data)
 	if data then
 		table.insert(self.body, data)
 	end
@@ -76,9 +94,7 @@ function response_mt:finish (data)
 end
 
 local function make_response ()
-	return setmetatable({
-		body = {}
-	}, response_mt)
+	return Response({ body = {} })
 end
 
 
@@ -92,7 +108,7 @@ runner:AddTest("GET", function(test)
 	local req, res = make_request(), make_response()
 
 	req.url = "/hello/world"
-	req.method = "get"
+	req.method = "GET"
 	req.headers = {Accept = "*/*", Foo = "bar"}
 
 	server:emit("request", req, res)
@@ -111,7 +127,7 @@ runner:AddTest("GET not found", function(test)
 	local req, res = make_request(), make_response()
 
 	req.url = "/not_found"
-	req.method = "get"
+	req.method = "GET"
 	req.headers = {Accept = "*/*"}
 
 	server:emit("request", req, res)
@@ -131,11 +147,12 @@ runner:AddTest("POST", function(test)
 	local req, res = make_request(), make_response()
 
 	req.url = "/postit"
-	req.method = "post"
+	req.method = "POST"
 	req.headers = {Accept = "*/*", Foo = "bar", ["Content-Length"] = 10}
-	req:finish("0123456789")
-
+	
 	server:emit("request", req, res)
+	
+	req:finish("0123456789")
 
 	test:assert_equal(200, res.status)
 	test:assert_equal("0123456789", res.body)
@@ -151,7 +168,7 @@ runner:AddTest("Method with no handler", function(test)
 	local req, res = make_request(), make_response()
 
 	req.url = "/hello/world"
-	req.method = "head"
+	req.method = "HEAD"
 	req.headers = {Accept = "*/*", Foo = "bar"}
 
 	server:emit("request", req, res)
@@ -168,7 +185,7 @@ runner:AddTest("Allowed method but no match", function(test)
 	local req, res = make_request(), make_response()
 
 	req.url = "/foo"
-	req.method = "get"
+	req.method = "GET"
 	req.headers = {Accept = "*/*", Foo = "bar"}
 
 	server:emit("request", req, res)
@@ -194,6 +211,27 @@ runner:AddTest("Unknown method", function(test)
 
 	test:Done()
 
+end)
+
+---
+-- Raw POST. Must reply 200.
+--
+runner:AddTest("RAW POST", function(test)
+
+	local req, res = make_request(), make_response()
+
+	req.url = "/raw_post"
+	req.method = "POST"
+	req.headers = {Accept = "*/*", Foo = "bar", ["Content-Length"] = 10}
+
+	server:emit("request", req, res)
+
+	req:finish("0123456789")
+
+	test:assert_equal(200, res.status)
+	test:assert_equal("0123456789", res.body)
+
+	test:Done()
 end)
 
 runner:Run()

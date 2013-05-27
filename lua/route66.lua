@@ -35,17 +35,19 @@ do
 	accepted_methods[method] = true
 end
 
+local accepted_raw_methods = { post = true, put = true }
+
 ---
 -- Creates a new router. Its http method dispatch will be populated on demand.
 --
-function new()
+function new ()
 	local r = { dispatch_table = {} }
 	return setmetatable(r, router_methods)
 end
 
 --
 --
-local function add_handler(router, method, ...)
+local function add_handler (router, method, raw, ...)
 	local n = select("#", ...)
 	assert(n >= 2, "you must supply a handler")
 	
@@ -63,14 +65,15 @@ local function add_handler(router, method, ...)
 		local url = select(i, ...)
 		t[#t + 1] = {
 			pattern = "^" .. url .. "$",
-			handler = handler
+			handler = handler,
+			raw = raw
 		}
 	end
 end
 
 --
 --
-function router_methods.not_found(req, res)
+function router_methods.not_found (req, res)
 	local NOT_FOUND = "Not Found\n"
 	res:writeHead(404, { ["Content-Type"] = "text/plain", ["Content-Length"] = #NOT_FOUND })
 	res:finish(NOT_FOUND)
@@ -81,13 +84,19 @@ end
 --
 for method in pairs(accepted_methods) do
 	router_methods[method] = function(self, ...)
-		add_handler(self, method, ...)
+		add_handler(self, method, false, ...)
+	end
+end
+
+for method in pairs(accepted_raw_methods) do
+	router_methods["raw_" .. method] = function(self, ...)
+		add_handler(self, method, true, ...)
 	end
 end
 
 --
 --
-local function dispatcher(router, method, path)
+local function dispatcher (router, method, path)
 	local dispatch_entries = router.dispatch_table[method]
 	if not dispatch_entries or #dispatch_entries == 0 then
 		return nil, "method_not_allowed"
@@ -106,18 +115,18 @@ local function dispatcher(router, method, path)
 					captures[i] = QueryString.url_decode(captures[i])
 				end
 			end
-			return entry.handler, captures
+			return entry.handler, captures, entry
 		end
 	end
 
-	return nil, "no_match_found"
+	return nil, "no_match_found", nil
 end
 
 ---
 -- Checks if there is a route for the given request.
 -- If the request is handled, returns true.
 --
-function router_methods:dispatch(server, req, res)
+function router_methods:dispatch (server, req, res)
 	local uri = Url.parse(req.url)
 	local pathname = uri.pathname
 	
@@ -130,7 +139,7 @@ function router_methods:dispatch(server, req, res)
 		return true
 	end
 	
-	local handler, captures = dispatcher(self, req.method:lower(), pathname)
+	local handler, captures, entry = dispatcher(self, req.method:lower(), pathname)
 	if debug_mode then
 		console.debug("method: '%s', path: '%s', handler: '%s'", req.method, pathname, handler)
 	end
@@ -146,7 +155,7 @@ function router_methods:dispatch(server, req, res)
 	
 	captures = captures or {}
 	
-	if req.method == "POST" or req.method == "PUT" then
+	if req.method == "POST" or req.method == "PUT" and not entry.raw then
 		req._incoming_data = {}
 		req:on("data", function (self, data)
 			req._incoming_data[#req._incoming_data + 1] = data
@@ -165,7 +174,7 @@ end
 
 --
 --
-function router_methods:bindServer(server)
+function router_methods:bindServer (server)
 	local router = self
 	router._server = server
 	

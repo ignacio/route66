@@ -32,6 +32,31 @@ By means of Lua's pattern matching abilities, you can define urls and capture pa
 your handler function. Each handler gets the request and the response, plus any additional arguments that may have been 
 captured.
 
+By default, *post* and *put* handlers will be called when all data has been received. If you need full control, you can 
+add a raw handler:
+
+```lua
+
+router:raw_post("/send_code", function(req, res)
+	res:writeHead(200, { ["Content-Type"] = "text/plain"})
+
+	req._incoming_data = {}
+	req:on("data", function(_, data)
+		table.insert(req._incoming_data, data)
+	end)
+
+	req:on("end", function()
+		req.body = table.concat(req._incoming_data)
+		if req.body == "4 8 15 16 23 42" then
+			res:finish(">:")
+		else
+			res:finish("boom!")
+		end
+	end)
+end)
+```
+
+
 ## Installation #
 **Route66** is installable with [LuaRocks][4].
 
